@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#22c55e" />
+    <meta name="description" content="Hike5 Trail Companion - Your ultimate hiking companion for European trails" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hike5" />
+    
+    <!-- iOS Splash Screens (optioneel, kan later) -->
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    
+    <title>Hike5 Trail Companion</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/icons/icon-72x72.png" />
+  </head>
+  <body>
+    <div id="app"></div>
+    
+    <!-- Scripts at end of body -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-gpx@1.7.0/gpx.js"></script>
+    <script type="module" src="/main.jsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/service-worker.js')
+            .then((registration) => {
+              console.log('✅ Service Worker registered:', registration);
+              
+              // Check for updates periodically
+              setInterval(() => {
+                registration.update();
+              }, 60000); // Check every minute
+            })
+            .catch((error) => {
+              console.log('❌ Service Worker registration failed:', error);
+            });
+        });
+      }
+      
+      // PWA Install prompt handling
+      let deferredPrompt;
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar from appearing
+        e.preventDefault();
+        // Stash the event so it can be triggered later
+        deferredPrompt = e;
+        
+        // Trigger custom install UI (we'll add this in main.jsx)
+        window.dispatchEvent(new CustomEvent('pwa-install-available'));
+        
+        console.log('💡 PWA install prompt available');
+      });
+      
+      // Track successful install
+      window.addEventListener('appinstalled', () => {
+        console.log('🎉 PWA installed successfully!');
+        deferredPrompt = null;
+      });
+      
+      // Make install function available globally
+      window.showPWAInstall = () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('✅ User accepted install');
+            } else {
+              console.log('❌ User dismissed install');
+            }
+            deferredPrompt = null;
+          });
+        }
+      };
+      
+      // Detect if running as installed PWA
+      window.isPWA = () => {
+        return window.matchMedia('(display-mode: standalone)').matches || 
+               window.navigator.standalone || 
+               document.referrer.includes('android-app://');
+      };
+      
+      // Log PWA status
+      if (window.isPWA()) {
+        console.log('🚀 Running as installed PWA!');
+      } else {
+        console.log('🌐 Running in browser');
+      }
+    </script>
+  </body>
+</html>

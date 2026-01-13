@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Pieterpad",
+    "json": "/data/trails/pieterpad/pieterpad.json",
+    "image": "/data/trails/pieterpad/pieterpad-hero.jpg",
+    "countries": ["NL"],
+    "from": "Pieterburen",
+    "to": "Sint-Pietersberg",
+    "distance_km": 505,
+    "stageCount": 26,
+    "seasons": ["Voorjaar", "Zomer", "Herfst"]
+  },
+  {
+    "name": "Fisherman's Trail",
+    "json": "/data/trails/fishermans-trail/fishermans-trail.json",
+    "image": "/data/trails/fishermans-trail/fishermans-trail-hero.jpg",
+    "countries": ["PT"],
+    "from": "São Torpes",
+    "to": "Lagos",
+    "distance_km": 226,
+    "stageCount": 13,
+    "seasons": ["Voorjaar", "Herfst", "Winter"]
+  },
+  {
+    "name": "Metz naar Lamalou-les-Bains",
+    "json": "/data/trails/metz-lamalou/metz-lamalou.json",
+    "image": "/data/trails/metz-lamalou/metz-lamalou-hero.jpg",
+    "countries": ["FR"],
+    "from": "Metz",
+    "to": "Lamalou-les-Bains",
+    "distance_km": 1017,
+    "stageCount": 0,
+    "seasons": ["Voorjaar", "Zomer", "Herfst"]
+  },
+  {
+    "name": "GR5",
+    "json": "/data/trails/gr5/gr5.json",
+    "image": "/data/trails/gr5/gr5-hero.jpg",
+    "countries": ["NL", "BE", "LU", "FR", "CH"],
+    "from": "Hoek van Holland",
+    "to": "Nice",
+    "distance_km": 2500,
+    "stageCount": 60,
+    "seasons": ["Voorjaar", "Zomer", "Herfst"]
+  }
+]

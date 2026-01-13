@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pieterpad planner</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f6f7fb; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 18px; }
+    .card { background: #fff; border-radius: 14px; padding: 14px 14px; box-shadow: 0 6px 20px rgba(0,0,0,.06); }
+    h1 { margin: 0 0 10px; font-size: 22px; }
+    h2 { margin: 0 0 10px; font-size: 16px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 900px) { .grid { grid-template-columns: 420px 1fr; } }
+    .muted { color: #6b7280; font-size: 13px; }
+    .btn { border: 0; background: #111827; color: #fff; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+    .btn.secondary { background: #e5e7eb; color: #111827; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #f3f4f6; font-size: 13px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .day { border: 1px solid #eef0f4; border-radius: 12px; padding: 10px; }
+    .dayHead { display:flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .dayTitle { font-weight: 650; }
+    .km { font-weight: 650; }
+    .warn { color: #b45309; font-weight: 650; }
+    .stages { margin-top: 8px; display: grid; gap: 6px; }
+    .stageLine { display:flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px; border-radius: 10px; background: #f9fafb; }
+    .stageMain { min-width: 0; }
+    .stageMain small { color: #6b7280; display:block; margin-top:2px; }
+    .actions { display:flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .danger { background: #fee2e2; color:#7f1d1d; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="grid">
+      <section class="card">
+        <h1>Pieterpad — officiële etappes</h1>
+        <p class="muted">
+          Per dag kun je de volgende etappe “eraan plakken” (snelle wandelaars), zonder dat alles automatisch 2x wordt.
+        </p>
+
+        <div class="row" style="margin-top:10px;">
+          <span class="pill">⚙️ Dag-waarschuwing: <strong id="warnKmLabel">40</strong> km</span>
+          <span class="pill">
+            <label class="muted" style="margin-right:8px;">Max km</label>
+            <input id="warnKmInput" type="number" value="40" min="10" max="80" style="width:80px; padding:6px 8px; border-radius:10px; border:1px solid #e5e7eb;">
+          </span>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="resetPlanBtn">Reset naar 1 etappe/dag</button>
+          <button class="btn secondary" id="autoFastBtn">Auto: voeg 2e toe als dag &lt; 18 km</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <h2>Wandeldagen</h2>
+          <div class="pill">🧾 Dagen: <strong id="dayCount">0</strong></div>
+          <div class="pill">📏 Totaal: <strong id="totalKm">0</strong> km</div>
+        </div>
+
+        <ul class="list" id="daysList" style="margin-top:12px;"></ul>
+      </section>
+    </div>
+  </div>
+
+<script>
+/**
+ * DATA (Pieterpad, 26 etappes).
+ * Als je later GPX/POI’s toevoegt, kun je dit object uitbreiden.
+ */
+const PIETERPAD = {
+  name: "Pieterpad",
+  stages: [
+    { id:"pp-01", from:"Pieterburen", to:"Winsum", km:12 },
+    { id:"pp-02", from:"Winsum", to:"Groningen", km:22 },
+    { id:"pp-03", from:"Groningen", to:"Zuidlaren", km:21 },
+    { id:"pp-04", from:"Zuidlaren", to:"Rolde", km:17 },
+    { id:"pp-05", from:"Rolde", to:"Schoonloo", km:18 },
+    { id:"pp-06", from:"Schoonloo", to:"Sleen", km:23 },
+    { id:"pp-07", from:"Sleen", to:"Coevorden", km:21 },
+    { id:"pp-08", from:"Coevorden", to:"Hardenberg", km:19 },
+    { id:"pp-09", from:"Hardenberg", to:"Ommen", km:21 },
+    { id:"pp-10", from:"Ommen", to:"Hellendoorn", km:21 },
+    { id:"pp-11", from:"Hellendoorn", to:"Holten", km:15 },
+    { id:"pp-12", from:"Holten", to:"Laren", km:15 },
+    { id:"pp-13", from:"Laren", to:"Vorden", km:14 },
+    { id:"pp-14", from:"Vorden", to:"Zelhem", km:17 },
+    { id:"pp-15", from:"Zelhem", to:"Braamt", km:17 },
+    { id:"pp-16", from:"Braamt", to:"Millingen a/d Rijn", km:25 },
+    { id:"pp-17", from:"Millingen a/d Rijn", to:"Groesbeek", km:20 },
+    { id:"pp-18", from:"Groesbeek", to:"Gennep", km:15 },
+    { id:"pp-19", from:"Gennep", to:"Vierlingsbeek", km:19 },
+    { id:"pp-20", from:"Vierlingsbeek", to:"Swolgen", km:24 },
+    { id:"pp-21", from:"Swolgen", to:"Venlo", km:21 },
+    { id:"pp-22", from:"Venlo", to:"Swalmen", km:23 },
+    { id:"pp-23", from:"Swalmen", to:"Montfort", km:22 },
+    { id:"pp-24", from:"Montfort", to:"Sittard", km:24 },
+    { id:"pp-25", from:"Sittard", to:"Strabeek", km:22 },
+    { id:"pp-26", from:"Strabeek", to:"Sint Pietersberg", km:17 }
+  ]
+};
+
+// --------------------
+// STATE: plan als "dagen", elke dag = array stageIndexen
+// start: 1 etappe per dag
+// --------------------
+const state = {
+  warnKm: 40,
+  planDays: [] // [ [0], [1], [2], ... ]
+};
+
+function initPlanOnePerDay() {
+  state.planDays = PIETERPAD.stages.map((_, i) => [i]);
+}
+
+// --------------------
+// HELPERS
+// --------------------
+function sumKmOfDay(dayStageIdxs) {
+  let sum = 0;
+  for (const idx of dayStageIdxs) sum += (PIETERPAD.stages[idx]?.km || 0);
+  return Math.round(sum * 10) / 10;
+}
+
+function totalKmPlan() {
+  return PIETERPAD.stages.reduce((a,s)=>a+(s.km||0),0);
+}
+
+function canMergeNext(dayIndex) {
+  // merge betekent: pak eerste stage van volgende dag en voeg toe aan huidige dag
+  if (dayIndex < 0 || dayIndex >= state.planDays.length - 1) return false;
+  const nextDay = state.planDays[dayIndex + 1];
+  return Array.isArray(nextDay) && nextDay.length > 0;
+}
+
+function mergeNextIntoDay(dayIndex) {
+  if (!canMergeNext(dayIndex)) return;
+
+  const day = state.planDays[dayIndex];
+  const nextDay = state.planDays[dayIndex + 1];
+
+  // Pak de EERSTE etappe uit de volgende dag
+  const movedStage = nextDay.shift();
+  day.push(movedStage);
+
+  // Als de volgende dag leeg is, verwijder die dag
+  if (nextDay.length === 0) state.planDays.splice(dayIndex + 1, 1);
+}
+
+function splitDayAfterFirst(dayIndex) {
+  const day = state.planDays[dayIndex];
+  if (!Array.isArray(day) || day.length <= 1) return;
+
+  // Houd de eerste etappe in deze dag, zet de rest in nieuwe dag erna
+  const keep = [day[0]];
+  const moved = day.slice(1);
+
+  state.planDays[dayIndex] = keep;
+  state.planDays.splice(dayIndex + 1, 0, moved);
+}
+
+function autoFastRule() {
+  // “Auto: voeg 2e toe als dag < 18 km”
+  // (simpel, en vermijdt meestal 40+; pas drempel gerust aan)
+  const threshold = 18;
+
+  let i = 0;
+  while (i < state.planDays.length - 1) {
+    const km = sumKmOfDay(state.planDays[i]);
+    if (km < threshold && canMergeNext(i)) {
+      mergeNextIntoDay(i);
+      // na merge opnieuw checken of hij nog < threshold (evt 3e toevoegen?)
+      // -> dat willen we meestal NIET, dus we gaan door naar volgende dag:
+      i++;
+    } else {
+      i++;
+    }
+  }
+}
+
+// --------------------
+// RENDER
+// --------------------
+function render() {
+  document.getElementById("warnKmLabel").textContent = String(state.warnKm);
+
+  document.getElementById("dayCount").textContent = String(state.planDays.length);
+  document.getElementById("totalKm").textContent = String(Math.round(totalKmPlan() * 10) / 10);
+
+  const list = document.getElementById("daysList");
+  list.innerHTML = "";
+
+  state.planDays.forEach((dayStageIdxs, dayIndex) => {
+    const km = sumKmOfDay(dayStageIdxs);
+    const isWarn = km >= state.warnKm;
+
+    const li = document.createElement("li");
+    li.className = "day";
+
+    const head = document.createElement("div");
+    head.className = "dayHead";
+
+    head.innerHTML = `
+      <div>
+        <div class="dayTitle">Dag ${dayIndex + 1}</div>
+        <div class="muted">${dayStageIdxs.length} etappe(s)</div>
+      </div>
+      <div class="km ${isWarn ? "warn" : ""}">${km} km ${isWarn ? "⚠️" : ""}</div>
+    `;
+    li.appendChild(head);
+
+    const stagesDiv = document.createElement("div");
+    stagesDiv.className = "stages";
+
+    for (const idx of dayStageIdxs) {
+      const s = PIETERPAD.stages[idx];
+      const row = document.createElement("div");
+      row.className = "stageLine";
+      row.innerHTML = `
+        <div class="stageMain">
+          <strong>Etappe ${idx + 1}</strong>: ${s.from} → ${s.to}
+          <small>${s.id}</small>
+        </div>
+        <div class="muted">${s.km} km</div>
+      `;
+      stagesDiv.appendChild(row);
+    }
+    li.appendChild(stagesDiv);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn";
+    addBtn.textContent = "+ voeg volgende etappe toe";
+    addBtn.disabled = !canMergeNext(dayIndex);
+    addBtn.addEventListener("click", () => {
+      mergeNextIntoDay(dayIndex);
+      render();
+    });
+
+    const splitBtn = document.createElement("button");
+    splitBtn.className = "btn secondary";
+    splitBtn.textContent = "Splits (maak weer 1 etappe/dag)";
+    splitBtn.disabled = dayStageIdxs.length <= 1;
+    splitBtn.addEventListener("click", () => {
+      splitDayAfterFirst(dayIndex);
+      render();
+    });
+
+    actions.appendChild(addBtn);
+    actions.appendChild(splitBtn);
+
+    li.appendChild(actions);
+    list.appendChild(li);
+  });
+}
+
+// --------------------
+// EVENTS
+// --------------------
+document.getElementById("resetPlanBtn").addEventListener("click", () => {
+  initPlanOnePerDay();
+  render();
+});
+
+document.getElementById("autoFastBtn").addEventListener("click", () => {
+  autoFastRule();
+  render();
+});
+
+document.getElementById("warnKmInput").addEventListener("input", (e) => {
+  const v = parseInt(e.target.value, 10);
+  state.warnKm = Number.isFinite(v) ? v : 40;
+  render();
+});
+
+// --------------------
+// BOOT
+// --------------------
+initPlanOnePerDay();
+render();
+</script>
+</body>
+</html>
